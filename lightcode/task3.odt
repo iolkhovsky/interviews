@@ -1,0 +1,63 @@
+The task
+
+We need to solve common object detection task on the input data presented as point cloud (coordinates plus intensity). At first iteration we consider only 2 object classes – spheres and cuboids.
+
+Before start, it’s important to define the next things regarding the final goal:
+- what is the quality metric for the solution?
+- is there any performance constraints (do wee need to process one cloud within definite timing constraints)?
+- what is the target hardware (where the final solution should be deployed)?
+- do we need to keep in mind further scaling of the system (more wide list of target object classes, new additional sources of input data)?
+
+Let’s assume that the answers are as follows:
+1. Quality metrics
+We solve common object detection task so it’s possible to use mAP (mean average precision, average precision) as a quality metrics for the solution being developed (assuming that the algorithm not only classifies objects but also estimates confidence score for each predicted object).
+It is common practice to use IoU threshold to 0.5 (to match predicted bounding boxes with target truth ones).
+Resume – we’re going to assess detection quality using mAP@IoU=0.5
+2. Performance constraints
+If there is no any baseline and we’re going to develop a prototype then at the first stage it’s suggested not to consider any performance limitations
+3. Hardware
+It’s a good idea to formulate what is a set of probable platforms to deploy the solution – from the easiest (embedded ARM) to the most efficient (GPGPUs). This information will play important role after some baseline solution is gotten
+4. Further improvements
+Let’s assume that initial set of target classes is not the final and we’re going to detect other (less specific) classes in the future
+
+
+High-level overview of the solution
+
+The core of the solution is a deep neural network detector. Specific architecture of the model should be defined after preliminary research (actual articles analysis, experiments with possible ready-to-use solutions). Anyway, in common case, we need to train some abstract model from scratch. To do so, we need to solve the next problems:
+1. Data
+- Data collection. If there is no open datasets we need to organize the process of data collection
+- Data markup. In general, we need some specific markup tool which allows to define ground truth for the model. In the context of the task we need to have option to put bounding boxes into point cloud scenes.
+- Data storage. We need to store collected data and markup. Optionally we have to control data & markup versions
+- Data validation. We need to have opportunity to visualize the data with corresponding markup to make sure that the model uses valid data to train
+2. Training
+- Framework. We should choose some DL framework (Tensorflow, PyTorch etc.) to describe the model and to train it
+- Training tool. In common it is a training script with some necessary utils which allow to load the labeled data, to run optimization process and to validate the model (run quality assessment on the validation subset and optionally visualize inference results)
+3. Testing
+- Testing tool should take trained model and run model’s inference on the test data to estimate solution quality (computes target quality metrics)
+4. Model’s export
+- After trained model is tested (and the results are acceptable) we’re going to export the network into representation suitable for deployment – TensorRT engine, ONNX, Tensorflow SavedModel etc.
+
+
+A common way to deploy the solution is to develop REST server. The server should implement the next features:
+- receive the data (point cloud in any representation - h5 file, JSON etc.)
+- run model’s inference
+- return processed output – bounding boxes & corresponding classification confidence scores (results may be sent back to the client as JSON)
+- minimal web UI (to have opportunity to test the model without additional specific software – using any common browser)
+
+
+
+
+
+
+
+
+
+
+The main problems related to the system development & deployment
+
+1. Find the best architecture for the detection model
+2. Hyperparametrs tuning
+3. Develop infrastructure for markup/training/testing
+4. Solve performance problems (optimize the solution for a target hardware)
+5. Automate trained model release (train/test/export) after the data updated
+
